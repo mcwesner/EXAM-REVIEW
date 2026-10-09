@@ -1,0 +1,70 @@
+#include <Arduino.h>
+
+#define BUTTON_PIN 21
+#define DEBOUNCE_MS 100
+#define DOUBLE_MS 500
+
+int previousRaw = HIGH;
+int stableButton = HIGH;
+uint32_t lastRawChange = 0;
+
+bool waiting = false;
+uint32_t firstPressMs = 0;
+
+void singleAction()
+{
+  // Change the single-press action.
+  Serial.println("Single press");
+}
+
+void doubleAction()
+{
+  // Change the double-press action.
+  Serial.println("Double press");
+}
+
+void setup()
+{
+  Serial.begin(9600);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  previousRaw = digitalRead(BUTTON_PIN);
+  lastRawChange = millis();
+}
+
+void loop()
+{
+  uint32_t now = millis();
+  int raw = digitalRead(BUTTON_PIN);
+
+  if (raw != previousRaw)
+  {
+    previousRaw = raw;
+    lastRawChange = now;
+  }
+
+  if (waiting && now - firstPressMs >= DOUBLE_MS)
+  {
+    waiting = false;
+    singleAction();
+  }
+
+  if (raw != stableButton &&
+      now - lastRawChange >= DEBOUNCE_MS)
+  {
+    stableButton = raw;
+
+    if (stableButton == LOW)
+    {
+      if (waiting)
+      {
+        waiting = false;
+        doubleAction();
+      }
+      else
+      {
+        waiting = true;
+        firstPressMs = now;
+      }
+    }
+  }
+}
